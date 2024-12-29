@@ -15,7 +15,6 @@ class DiningPhilosophers {
   bool run();
   bool post_processing();
   bool check_deadlock();
-  bool check_all_think();
 
  private:
   int num_philosophers_;
@@ -27,6 +26,7 @@ class DiningPhilosophers {
   void init_philosophers();
   void philosopher_actions(int id);
   bool is_deadlock();
+  void update_fork_states();
 };
 
 }  // namespace konkov_i_dining_philosophers

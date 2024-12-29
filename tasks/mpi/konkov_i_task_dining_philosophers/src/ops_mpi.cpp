@@ -19,6 +19,7 @@ bool DiningPhilosophers::pre_processing() {
   if (rank_ == 0) {
     init_philosophers();
   }
+  MPI_Bcast(fork_states_.data(), num_philosophers_, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Barrier(MPI_COMM_WORLD);
   return true;
 }
@@ -28,6 +29,7 @@ bool DiningPhilosophers::run() {
     if (rank_ == i) {
       philosopher_actions(i);
     }
+    update_fork_states();
     MPI_Barrier(MPI_COMM_WORLD);
   }
   return true;
@@ -36,10 +38,6 @@ bool DiningPhilosophers::run() {
 bool DiningPhilosophers::post_processing() { return !is_deadlock(); }
 
 bool DiningPhilosophers::check_deadlock() { return is_deadlock(); }
-
-bool DiningPhilosophers::check_all_think() {
-  return std::all_of(philosopher_states_.begin(), philosopher_states_.end(), [](int state) { return state == 0; });
-}
 
 void DiningPhilosophers::init_philosophers() {
   std::fill(fork_states_.begin(), fork_states_.end(), 0);
@@ -50,21 +48,27 @@ void DiningPhilosophers::philosopher_actions(int id) {
   int left_fork = id;
   int right_fork = (id + 1) % num_philosophers_;
 
-  // Attempt to pick up forks
   if (fork_states_[left_fork] == 0 && fork_states_[right_fork] == 0) {
     fork_states_[left_fork] = 1;
     fork_states_[right_fork] = 1;
     philosopher_states_[id] = 1;  // Eating
   }
 
-  // Release forks
   fork_states_[left_fork] = 0;
   fork_states_[right_fork] = 0;
   philosopher_states_[id] = 0;  // Thinking
 }
 
 bool DiningPhilosophers::is_deadlock() {
-  return std::all_of(philosopher_states_.begin(), philosopher_states_.end(), [](int state) { return state == 1; });
+  bool local_deadlock =
+      std::all_of(philosopher_states_.begin(), philosopher_states_.end(), [](int state) { return state == 1; });
+  bool global_deadlock = false;
+  MPI_Allreduce(&local_deadlock, &global_deadlock, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
+  return global_deadlock;
+}
+
+void DiningPhilosophers::update_fork_states() {
+  MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, fork_states_.data(), 1, MPI_INT, MPI_COMM_WORLD);
 }
 
 }  // namespace konkov_i_dining_philosophers
