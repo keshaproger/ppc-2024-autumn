@@ -71,3 +71,19 @@ TEST(konkov_i_LinearHistStretchTest, NegativeValuesSeq) {
     EXPECT_LE(image_data[i], 255);
   }
 }
+
+TEST(konkov_i_LinearHistStretchTest, SinglePixelImageSeq) {
+  const int image_size = 1;
+  int image_data[image_size];
+  image_data[0] = 50;
+
+  konkov_i_linear_hist_stretch::LinearHistogramStretch lht(image_size, image_data);
+
+  ASSERT_TRUE(lht.validation());
+  ASSERT_TRUE(lht.pre_processing());
+  ASSERT_TRUE(lht.run());
+  ASSERT_TRUE(lht.post_processing());
+
+  EXPECT_GE(image_data[0], 0);
+  EXPECT_LE(image_data[0], 255);
+}
